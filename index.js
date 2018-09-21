@@ -42,6 +42,13 @@ module.exports = function (log, isReady) {
     }
   }
 
+  var reduce = (maps, value) => {
+    maps.forEach(map => {
+      value = map(value)
+    })
+    return value
+  }
+
   var ready = Obv()
   ready.set(isReady !== undefined ? isReady : true)
   var flume = {
@@ -51,20 +58,35 @@ module.exports = function (log, isReady) {
     since: log.since,
     ready: ready,
     meta: meta,
+    maps: [],
     append: function (value, cb) {
       return log.append(value, cb)
     },
     stream: function (opts) {
-      return PullCont(function (cb) {
-        log.since.once(function () {
-          cb(null, pull(log.stream(opts), Looper))
+      return PullCont((cb) => {
+        log.since.once(() => {
+          cb(null, pull(
+            log.stream(opts),
+            pull.map((obj) => {
+              obj.value = reduce(this.maps, obj.value)
+              return obj
+            }),
+            Looper
+          ))
         })
       })
     },
     get: function (seq, cb) {
-      log.since.once(function () {
-        log.get(seq, cb)
+      log.since.once(() => {
+        log.get(seq, (err, obj) => {
+          obj = reduce(this.maps, obj)
+          cb(err, obj)
+        })
       })
+    },
+    map: function (fn) {
+      this.maps.push(fn)
+      return this
     },
     use: function (name, createView) {
       if(~Object.keys(flume).indexOf(name))
