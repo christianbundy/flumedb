@@ -30,7 +30,7 @@ function asyncify () {
   }
 }
 
-module.exports = function (log, isReady, mapper) {
+module.exports = function (log, isReady, mapper, mapWidth) {
   var views = []
   var meta = {}
 
@@ -51,7 +51,7 @@ module.exports = function (log, isReady, mapper) {
     if (opts.values === false)
       return
     else if (opts.seqs === false)
-      return paramap(mapper)
+      return paramap(mapper, mapWidth)
     else
       return paramap((data, cb) => {
         mapper(data.value, (err, value) => {
@@ -61,7 +61,7 @@ module.exports = function (log, isReady, mapper) {
             cb(err, data)
           }
         })
-      })
+      }, mapWidth)
   }
 
   function get (seq, cb) {
